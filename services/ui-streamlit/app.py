@@ -16,7 +16,7 @@ L'URL de l'API est dans la variable d'environnement `API_URL`
 from __future__ import annotations
 
 import os
-
+import httpx
 import streamlit as st
 
 
@@ -52,11 +52,33 @@ if st.button("Analyser", type="primary", disabled=not texte.strip()):
     # - Affiche le sentiment dans un encadré coloré (st.success / st.warning /
     #   st.error selon la classe).
     # - Affiche les scores 5 étoiles bruts via st.bar_chart().
-    st.info("📡 Appel API à implémenter — Tâche 4 du brief M0-B2.")
-    st.code(
-        f'httpx.post("{API_URL}/predict", json={{"texte": "..."}}, timeout=10)',
-        language="python",
-    )
+    with st.spinner("Analyse en cours..."):
+        try:
+            response = httpx.post(
+                f"{API_URL}/predict",
+                json={"texte": texte},
+                timeout=10.0
+            )
+            response.raise_for_status()
+            data = response.json()
+            match data["sentiment"]:
+                case "négatif":
+                    st.error("🔴 Sentiment: Négatif")
+                case "neutre":
+                    st.warning("🟠 Sentiment: Neutre")
+                case "positif":
+                    st.success("🟢 Sentiment: Positif")
+            st.subheader("Probabilités en barres")
+            st.bar_chart(data["scores_5_stars"])
+        except httpx.TimeoutException:
+            st.error("L'api a mis trop de temps a répondre")
+            st.stop()
+        except httpx.RequestError:
+            st.error("Impossible de contacter l'API")
+            st.stop()
+        except httpx.HTTPStatusError as exc:
+            st.error(f"Erreur renvoyé : (code {exc.response.status_code}) : {exc.response.text}")
+            st.stop()
 
 with st.sidebar:
     st.markdown(f"**API URL** : `{API_URL}`")
