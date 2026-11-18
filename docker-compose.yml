@@ -21,9 +21,13 @@ services:
       # Chemin interne au conteneur (non configurable par l'apprenant)
       HF_HOME: /app/models
     volumes:
+      # Code applicatif en bind mount (hot-reload sans rebuild)
+      - ./services/api-nlp/app:/app/app
+      - ./services/api-nlp/tests:/app/tests
       # cache modèle HF (sinon re-download à chaque up) — préserve aussi entre `down` et `up`
       - ./models:/app/models
       - ./logs:/app/logs
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
       interval: 30s
@@ -42,6 +46,10 @@ services:
       - "8501:8501"
     environment:
       API_URL: http://api-nlp:8000
+    volumes:
+      # Code applicatif en bind mount (hot-reload sans rebuild)
+      - ./services/ui-streamlit:/app
+    command: ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true", "--server.runOnSave=true"]
     depends_on:
       api-nlp:
         condition: service_started
