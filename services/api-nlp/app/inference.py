@@ -16,9 +16,10 @@ en argument.
 from __future__ import annotations
 
 # DECISION: (à écrire avant de coder, en français)
-#   Règle retenue : ... étoiles -> négatif / ... -> neutre / ... -> positif
-#   Argument métier 1 : ...
-#   Argument métier 2 : ...
+#   Règle retenue : B exigeant 1-2-3 -> négatif 4 -> neutre 5 -> positif
+#   Capturer les avis moyen mitigé (3 stars) dans la fil prioritaire négatif permettra de régler et paufiner des problemes qui sont en général pas pris en compte (avis moyen)
+#   en mettant les avis neutre en 4 (des séjours généralement bon) l'équipe ne perdera pas de temps a traiter de bon séjours.
+#   De plus les études du secteur hôtelier (Cornell University / TripAdvisor),  démontrent qu'en dessous de 4/5 la moyenne chute en la tirant vers le bas
 
 import time
 from typing import Any
