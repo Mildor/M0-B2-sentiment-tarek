@@ -26,6 +26,14 @@ from app.schemas import HealthOut, InfoOut, ReviewIn, SentimentOut
 # Pour debugger un cas complexe, repasse à diagnose=True ponctuellement.
 logger.remove()
 logger.add(sys.stderr, level="INFO", backtrace=False, diagnose=False)
+logger.add(
+    "logs/api.log",
+    rotation="10 MB",
+    retention="30 days",
+    compression="zip",
+    level="INFO",
+    enqueue=True,
+)
 
 
 # --- Filtre access log uvicorn : on n'affiche pas les pings healthcheck ---
@@ -43,11 +51,13 @@ logging.getLogger("uvicorn.access").addFilter(_SkipHealthAccessLogs())
 # Si le .env est absent, Docker Compose plante au démarrage avec
 # "env file not found" — l'apprenant a un retour immédiat, pas besoin
 # de check côté Python.
-MODEL_NAME: str = os.getenv("MODEL_NAME_HF", "cmarkea/distilcamembert-base-sentiment")
+MODEL_NAME: str = os.getenv(
+    "MODEL_NAME_HF", "cmarkea/distilcamembert-base-sentiment")
 MAX_TEXT_LENGTH: int = int(os.getenv("MAX_TEXT_LENGTH", "2000"))
 
 # Classes natives du modèle CamemBERT-sentiment (5 étoiles)
-NATIVE_CLASSES: list[str] = ["1 star", "2 stars", "3 stars", "4 stars", "5 stars"]
+NATIVE_CLASSES: list[str] = [
+    "1 star", "2 stars", "3 stars", "4 stars", "5 stars"]
 # Classes cibles après mapping métier
 TARGET_CLASSES: list[str] = ["négatif", "neutre", "positif"]
 
@@ -137,7 +147,12 @@ def predict(payload: ReviewIn) -> SentimentOut:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Texte trop long (> {MAX_TEXT_LENGTH} caractères).",
         )
-    return inference.predict_sentiment(text=payload.texte, model_name=MODEL_NAME, pipeline=state["pipeline"])
+    
+    
+    prediction = inference.predict_sentiment(text=payload.texte, model_name=MODEL_NAME, pipeline=state["pipeline"]) 
+    logger.info(f"Texte reçu : '{payload.texte[:80]}' | Sentiment prédit : {prediction.sentiment} | Temps de réponse : {round(prediction.latence_ms, 2)}ms")
+        
+    return prediction
     # TODO Tâche 3 — Appeler inference.predict_sentiment(). (logging: task 5)
     # Pour l'instant, on signale que ce n'est pas implémenté.
     # raise HTTPException(
