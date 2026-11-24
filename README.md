@@ -287,3 +287,70 @@ Logs en temps réel : `docker compose logs -f api-nlp`.
 **Demande de l'aide**, à l'oral ou par écrit dans le fil Discord du brief :
 les deux se valent. Par écrit, colle la commande lancée et le message
 d'erreur complet. N'attends pas 30 min sur le même problème.
+
+---
+
+## 📸 Preuves d'exécution
+
+### 🐳 État des conteneurs (`docker compose ps`)
+
+| Conteneur | Service | Statut | Ports |
+|---|---|---|---|
+| `m0b2-api-nlp` | `api-nlp` | 🟢 Up 5 hours (`healthy`) | `8000->8000` |
+| `m0b2-ui-streamlit` | `ui-streamlit` | 🟢 Up 5 hours | `8501->8501` |
+
+```bash
+$ docker compose ps
+NAME                IMAGE                                COMMAND                  SERVICE        CREATED       STATUS                 PORTS
+m0b2-api-nlp        m0-b2-sentiment-tarek-api-nlp        "uvicorn app.main:ap…"   api-nlp        5 hours ago   Up 5 hours (healthy)   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+m0b2-ui-streamlit   m0-b2-sentiment-tarek-ui-streamlit   "streamlit run app.p…"   ui-streamlit   5 hours ago   Up 5 hours             0.0.0.0:8501->8501/tcp, [::]:8501->8501/tcp
+```
+
+### 🧪 Tests automatisés (`pytest -v`)
+
+> **8/8 tests passés** (`PASSED`) en `6.42s` dans le conteneur `m0b2-api-nlp`.
+
+```text
+$ docker exec m0b2-api-nlp sh -c "pytest -v"
+============================= test session starts ==============================
+platform linux -- Python 3.11.18, pytest-8.3.4, pluggy-1.7.0 -- /usr/local/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /app
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.6.2.post1, asyncio-0.24.0
+asyncio: mode=Mode.STRICT, default_loop_scope=function
+collecting ... collected 8 items
+
+tests/test_health.py::test_health_endpoint_returns_200 PASSED            [ 12%]
+tests/test_predict.py::test_predict_positif PASSED                       [ 25%]
+tests/test_predict.py::test_predict_texte_null_toolong[] PASSED          [ 37%]
+tests/test_predict.py::test_predict_texte_null_toolong[   ] PASSED       [ 50%]
+tests/test_predict.py::test_predict_texte_null_toolong[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] PASSED [ 62%]
+tests/test_predict.py::test_predict_all_sentiment[Personnel charmant, chambre impeccable, petit-d\xe9jeuner copieux. On reviendra avec plaisir.-positif] PASSED [ 75%]
+tests/test_predict.py::test_predict_all_sentiment[Bonne situation centrale, parking pratique. Chambre un peu petite mais bien insonoris\xe9e.-neutre] PASSED [ 87%]
+tests/test_predict.py::test_predict_all_sentiment[Annulez votre r\xe9servation tant qu'il est temps. Service inexistant, chambre douteuse, prix abusif.-n\xe9gatif] PASSED [100%]
+
+============================== 8 passed in 6.42s ===============================
+```
+
+### 🌐 Test de l'endpoint `POST /predict` (`curl`)
+
+```bash
+$ curl -s -X POST http://localhost:8000/predict -H "Content-Type: application/json" -d '{"texte":"Personnel adorable qui s'\''est mis en quatre pour nous trouver une chambre malgré notre arrivée tardive."}'
+```
+
+```json
+{
+  "sentiment": "neutre",
+  "scores_5_stars": {
+    "4 stars": 0.4810522794723511,
+    "5 stars": 0.38876140117645264,
+    "3 stars": 0.10693101584911346,
+    "2 stars": 0.017520807683467865,
+    "1 star": 0.0057345302775502205
+  },
+  "model_name": "cmarkea/distilcamembert-base-sentiment",
+  "latence_ms": 81.89692799896875
+}
+```
